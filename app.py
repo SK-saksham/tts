@@ -443,8 +443,22 @@ f.addEventListener('submit', async e => {
           const text = await textRes.text();
           extText.innerHTML = '';
           const segments = text.match(/[^.!?\\n]+[.!?\\n]*\\s*/g) || [text];
+          
+          function getWeight(str) {
+            let w = 0;
+            for (let i = 0; i < str.length; i++) {
+              let c = str[i];
+              if (c === '\\n') w += 10;
+              else if (c === '.' || c === '?' || c === '!') w += 5;
+              else if (c === ',' || c === '-' || c === ':') w += 3;
+              else if (c.match(/[0-9]/)) w += 2; // numbers take longer to say
+              else w += 1;
+            }
+            return w;
+          }
+          
+          let totalWeight = segments.reduce((sum, seg) => sum + getWeight(seg), 0);
           let cumulative = 0;
-          let totalChars = text.length;
           
           segments.forEach((seg, i) => {
             const span = document.createElement('span');
@@ -452,9 +466,10 @@ f.addEventListener('submit', async e => {
             span.style.transition = 'color 0.2s, background 0.2s';
             extText.appendChild(span);
             
-            let startRatio = cumulative / totalChars;
-            cumulative += seg.length;
-            let endRatio = cumulative / totalChars;
+            let segWeight = getWeight(seg);
+            let startRatio = cumulative / totalWeight;
+            cumulative += segWeight;
+            let endRatio = cumulative / totalWeight;
             window.lineData.push({ el: span, start: startRatio, end: endRatio });
           });
         } else {
