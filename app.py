@@ -20,7 +20,7 @@ from pypdf import PdfReader
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB upload limit
 
-OUT_DIR = Path(tempfile.gettempdir()) / "doc2speech"
+OUT_DIR = Path(__file__).parent / "output"
 OUT_DIR.mkdir(exist_ok=True)
 
 VOICES = {
@@ -170,6 +170,12 @@ PAGE = """
     <div id="status"></div>
     <div id="result">
       <audio id="player" controls></audio><br>
+      <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px;">
+        <label for="playbackSpeed" style="margin: 0; font-weight: 600;">Listen Speed:</label>
+        <input type="range" id="playbackSpeed" min="0.5" max="2" step="0.1" value="1" 
+               oninput="document.getElementById('player').playbackRate = this.value; document.getElementById('speedLabel').innerText = this.value + 'x';">
+        <span id="speedLabel" style="font-weight: 600; color: var(--accent);">1x</span>
+      </div>
       <a id="dl" download="audio.mp3">Download MP3</a>
     </div>
   </div>
@@ -196,6 +202,8 @@ f.addEventListener('submit', async e => {
     document.getElementById('player').src = j.url;
     const dl = document.getElementById('dl');
     dl.href = j.url + '?dl=1'; dl.download = j.name;
+    document.getElementById('playbackSpeed').value = 1;
+    document.getElementById('speedLabel').innerText = '1x';
     res.style.display = 'block';
     st.textContent = `Done. ${j.chars.toLocaleString()} characters converted.`;
   } catch (err) {
@@ -231,6 +239,7 @@ def convert():
     if not text:
         return jsonify(error="No readable text found. Scanned PDFs (images) need OCR first."), 400
 
+    OUT_DIR.mkdir(exist_ok=True)
     out_id = uuid.uuid4().hex
     out_path = OUT_DIR / f"{out_id}.mp3"
     try:
