@@ -92,13 +92,29 @@ def split_chunks(text: str, limit: int = CHUNK_CHARS):
         yield chunk
 
 
+async def synthesize_chunk(chunk: str, voice: str, rate: str) -> bytes:
+    comm = edge_tts.Communicate(chunk, voice, rate=rate)
+    audio_data = bytearray()
+    async for msg in comm.stream():
+        if msg["type"] == "audio":
+            audio_data.extend(msg["data"])
+    return bytes(audio_data)
+
+
 async def synthesize(text: str, voice: str, rate: str, out_path: Path):
+    chunks = list(split_chunks(text))
+    sem = asyncio.Semaphore(10)  # limit concurrency to avoid rate limits
+    
+    async def process_with_sem(chunk):
+        async with sem:
+            return await synthesize_chunk(chunk, voice, rate)
+            
+    tasks = [process_with_sem(chunk) for chunk in chunks]
+    results = await asyncio.gather(*tasks)
+    
     with open(out_path, "wb") as f:
-        for chunk in split_chunks(text):
-            comm = edge_tts.Communicate(chunk, voice, rate=rate)
-            async for msg in comm.stream():
-                if msg["type"] == "audio":
-                    f.write(msg["data"])
+        for audio_bytes in results:
+            f.write(audio_bytes)
 
 
 PAGE = """
