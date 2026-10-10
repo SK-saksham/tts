@@ -168,7 +168,14 @@ f.addEventListener('submit', async e => {
   go.disabled = true;
   try {
     const r = await fetch('/convert', { method:'POST', body:new FormData(f) });
-    const j = await r.json();
+    let j;
+    const text_res = await r.text();
+    try {
+      j = JSON.parse(text_res);
+    } catch (parseErr) {
+      if (!r.ok) throw new Error(`Server returned an error (${r.status}). This usually means the file took too long to process and the request timed out.`);
+      throw new Error('Invalid response from server.');
+    }
     if (!r.ok) throw new Error(j.error || 'Something went wrong');
     document.getElementById('player').src = j.url;
     const dl = document.getElementById('dl');
