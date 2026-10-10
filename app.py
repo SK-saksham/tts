@@ -61,6 +61,10 @@ def extract_text(filename: str, data: bytes) -> str:
 def clean_text(text: str) -> str:
     text = text.replace("\u00ad", "")              # soft hyphens
     text = re.sub(r"-\n(?=[a-z])", "", text)       # join words hyphenated at line end
+    
+    # Preserve lists and questions by converting single newlines before them into double newlines
+    text = re.sub(r'\n(?=\s*(?:[0-9]+\.|Q\.|[A-Z]\.|[•\-\*]))', '\n\n', text)
+    
     text = re.sub(r"(?<!\n)\n(?!\n)", " ", text)   # single newlines -> space
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -305,6 +309,7 @@ PAGE = """
     color: var(--muted); 
     font-size: 15px; 
     font-family: inherit;
+    white-space: pre-wrap;
   }
   .highlighted-text {
     color: var(--accent);
