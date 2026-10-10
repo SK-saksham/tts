@@ -1,0 +1,6 @@
+flask
+edge-tts
+python-docx
+pypdf
+gunicorn
+waitress
